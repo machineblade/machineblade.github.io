@@ -52,17 +52,14 @@
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
-    
     <div id="mainMenu">
         <h1>Snake Cursor Game</h1>
         <button class="menu-button" onclick="startGame()">Start Game</button>
         <button class="menu-button" onclick="showSettings()">Settings</button>
     </div>
-
     <div id="gameControls">
         <button onclick="showMainMenu()">Back to Menu</button>
     </div>
-
     <div id="settings">
         <h2>Settings</h2>
         <div>
@@ -71,7 +68,6 @@
         </div>
         <button class="menu-button" onclick="hideSettings()">Back</button>
     </div>
-
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -97,7 +93,6 @@
             hasLog: false,
             color: '#00FF00'
         };
-
         let mousePos = {x: 0, y: 0};
         let bodyLength = 5;
         let walls = [];
@@ -194,7 +189,6 @@
             let dx = snake.x - aiSnake.x;
             let dy = snake.y - aiSnake.y;
             let distToPlayer = Math.hypot(dx, dy);
-            
             if(distToPlayer < 150) {
                 aiSnake.state = 'fleeing';
                 aiSnake.targetX = aiSnake.x - dx * 2;
@@ -204,43 +198,39 @@
                 aiSnake.targetX = Math.random() * canvas.width;
                 aiSnake.targetY = Math.random() * canvas.height;
             }
-
             let targetAngle = Math.atan2(aiSnake.targetY - aiSnake.y, aiSnake.targetX - aiSnake.x);
             let angleDiff = targetAngle - aiSnake.angle;
             if (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
             if (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
             aiSnake.angle += angleDiff * 0.1;
-            
             aiSnake.speed = aiSnake.state === 'fleeing' ? 4 : 3;
             aiSnake.x += Math.cos(aiSnake.angle) * aiSnake.speed;
             aiSnake.y += Math.sin(aiSnake.angle) * aiSnake.speed;
-
             if (aiSnake.segments.length === 0 || Math.hypot(aiSnake.x - aiSnake.segments[0].x, aiSnake.y - aiSnake.segments[0].y) > 5) {
                 aiSnake.segments.unshift({x: aiSnake.x, y: aiSnake.y});
                 if(aiSnake.segments.length > bodyLength) {
                     aiSnake.segments.pop();
                 }
             }
-
             aiSnake.x = Math.max(0, Math.min(canvas.width, aiSnake.x));
             aiSnake.y = Math.max(0, Math.min(canvas.height, aiSnake.y));
         }
 
+        function isTouchingWall(x, y, radius) {
+            return x - radius <= 0 || x + radius >= canvas.width || y - radius <= 0 || y + radius >= canvas.height;
+        }
+
         function update() {
             let speed = isMouseDown ? boostSpeed : baseSpeed;
-            
             aiSnakes.forEach((aiSnake, index) => {
                 updateAISnake(aiSnake);
-                
                 if(checkSnakeCollisions(aiSnake.x, aiSnake.y, snake.segments)) {
                     aiSnakes[index] = killSnake(aiSnake);
                 }
-                
                 if(checkSnakeCollisions(snake.x, snake.y, aiSnake.segments)) {
                     resetGame();
                     return;
                 }
-                
                 aiSnakes.forEach((otherSnake, otherIndex) => {
                     if(index !== otherIndex && checkSnakeCollisions(aiSnake.x, aiSnake.y, otherSnake.segments)) {
                         aiSnakes[index] = killSnake(aiSnake);
@@ -255,9 +245,18 @@
             if (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
             if (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
             snake.angle += angleDiff * 0.2;
-            
-            snake.x += Math.cos(snake.angle) * speed;
-            snake.y += Math.sin(snake.angle) * speed;
+
+            let newX = snake.x + Math.cos(snake.angle) * speed;
+            let newY = snake.y + Math.sin(snake.angle) * speed;
+
+            // Check if the new position would touch the wall
+            if (isTouchingWall(newX, newY, 10)) {
+                resetGame();
+                return;
+            }
+
+            snake.x = newX;
+            snake.y = newY;
 
             if (snake.segments.length === 0 || Math.hypot(snake.x - snake.segments[0].x, snake.y - snake.segments[0].y) > 5) {
                 snake.segments.unshift({x: snake.x, y: snake.y});
@@ -271,7 +270,6 @@
                     bodyLength = Math.min(50, bodyLength + 2);
                     snakeDrops.splice(index, 1);
                 }
-                
                 aiSnakes.forEach(aiSnake => {
                     if (Math.hypot(aiSnake.x - drop.x, aiSnake.y - drop.y) < 15) {
                         aiSnake.color = drop.color;
@@ -280,29 +278,22 @@
                     }
                 });
             });
-
-
-            snake.x = Math.max(0, Math.min(canvas.width, snake.x));
-            snake.y = Math.max(0, Math.min(canvas.height, snake.y));
         }
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
             snakeDrops.forEach(drop => {
                 ctx.fillStyle = drop.color;
                 ctx.beginPath();
                 ctx.arc(drop.x, drop.y, drop.size, 0, Math.PI * 2);
                 ctx.fill();
             });
-
             snake.segments.forEach((segment, i) => {
                 ctx.fillStyle = snake.color;
                 ctx.beginPath();
                 ctx.arc(segment.x, segment.y, 10 - (i * 0.1), 0, Math.PI * 2);
                 ctx.fill();
             });
-
             aiSnakes.forEach(aiSnake => {
                 aiSnake.segments.forEach((segment, i) => {
                     ctx.fillStyle = aiSnake.color;
