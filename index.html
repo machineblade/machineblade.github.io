@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Snake Cursor Game</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+        }
+        #mainMenu, #settings {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            color: white;
+        }
+        .menu-button {
+            display: block;
+            width: 200px;
+            padding: 15px;
+            margin: 10px auto;
+            font-size: 18px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .menu-button:hover {
+            background: #45a049;
+        }
+        #gameControls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            display: none;
+        }
+        #settings {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="mainMenu">
+        <h1>Snake Cursor Game</h1>
+        <button class="menu-button" onclick="startGame()">Start Game</button>
+        <button class="menu-button" onclick="showSettings()">Settings</button>
+    </div>
+
+    <div id="gameControls">
+        <button onclick="showMainMenu()">Back to Menu</button>
+    </div>
+
+    <div id="settings">
+        <h2>Settings</h2>
+        <div>
+            <label>Player Snake Color:</label>
+            <input type="color" id="playerColor" value="#00FF00" onchange="changePlayerColor(this.value)">
+        </div>
+        <button class="menu-button" onclick="hideSettings()">Back</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let gameRunning = false;
+        let snakeDrops = [];
+        let playerColor = '#00FF00';
+        let isMouseDown = false;
+        let baseSpeed = 3;
+        let boostSpeed = 8;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        let snake = {
+            x: canvas.width/2,
+            y: canvas.height/2,
+            angle: 0,
+            segments: [],
+            hasLog: false,
+            color: '#00FF00'
+        };
+
+        let mousePos = {x: 0, y: 0};
+        let bodyLength = 5;
+        let walls = [];
+        let aiSnakes = [];
+
+        function createAISnake() {
+            return {
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                angle: Math.random() * Math.PI * 2,
+                segments: [],
+                targetX: Math.random() * canvas.width,
+                targetY: Math.random() * canvas.height,
+                speed: 3,
+                color: `hsl(${Math.random() * 360}, 70%, 50%)`,
+                state: 'roaming'
+            };
+        }
+
+        function showSettings() {
+            document.getElementById('mainMenu').style.display = 'none';
+            document.getElementById('settings').style.display = 'block';
+        }
+
+        function hideSettings() {
+            document.getElementById('settings').style.display = 'none';
+            document.getElementById('mainMenu').style.display = 'block';
+        }
+
+        function startGame() {
+            document.getElementById('mainMenu').style.display = 'none';
+            document.getElementById('gameControls').style.display = 'block';
+            gameRunning = true;
+            resetGame();
+            gameLoop();
+        }
+
+        function showMainMenu() {
+            gameRunning = false;
+            document.getElementById('mainMenu').style.display = 'block';
+            document.getElementById('gameControls').style.display = 'none';
+        }
+
+        function killSnake(deadSnake) {
+            for(let i = 0; i < deadSnake.segments.length; i += 3) {
+                createSnakeDrop(
+                    deadSnake.segments[i].x,
+                    deadSnake.segments[i].y,
+                    deadSnake.color || playerColor
+                );
+            }
+            return createAISnake();
+        }
+
+        function resetGame() {
+            snake.x = canvas.width/2;
+            snake.y = canvas.height/2;
+            snake.angle = 0;
+            snake.segments = [];
+            snake.hasLog = false;
+            bodyLength = 5;
+            aiSnakes = [];
+            for(let i = 0; i < 10; i++) {
+                aiSnakes.push(createAISnake());
+            }
+            snakeDrops = [];
+        }
+
+        function changePlayerColor(color) {
+            playerColor = color;
+            snake.color = color;
+        }
+
+        function createSnakeDrop(x, y, color) {
+            snakeDrops.push({
+                x: x,
+                y: y,
+                color: color,
+                size: 8
+            });
+        }
+
+        function checkSnakeCollisions(x, y, segments, excludeHead = false) {
+            let start = excludeHead ? 3 : 0;
+            for(let i = start; i < segments.length; i++) {
+                if(Math.hypot(x - segments[i].x, y - segments[i].y) < 15) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function updateAISnake(aiSnake) {
+            let dx = snake.x - aiSnake.x;
+            let dy = snake.y - aiSnake.y;
+            let distToPlayer = Math.hypot(dx, dy);
+            
+            if(distToPlayer < 150) {
+                aiSnake.state = 'fleeing';
+                aiSnake.targetX = aiSnake.x - dx * 2;
+                aiSnake.targetY = aiSnake.y - dy * 2;
+            } else if(Math.hypot(aiSnake.x - aiSnake.targetX, aiSnake.y - aiSnake.targetY) < 50) {
+                aiSnake.state = 'roaming';
+                aiSnake.targetX = Math.random() * canvas.width;
+                aiSnake.targetY = Math.random() * canvas.height;
+            }
+
+            let targetAngle = Math.atan2(aiSnake.targetY - aiSnake.y, aiSnake.targetX - aiSnake.x);
+            let angleDiff = targetAngle - aiSnake.angle;
+            if (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+            if (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+            aiSnake.angle += angleDiff * 0.1;
+            
+            aiSnake.speed = aiSnake.state === 'fleeing' ? 4 : 3;
+            aiSnake.x += Math.cos(aiSnake.angle) * aiSnake.speed;
+            aiSnake.y += Math.sin(aiSnake.angle) * aiSnake.speed;
+
+            if (aiSnake.segments.length === 0 || Math.hypot(aiSnake.x - aiSnake.segments[0].x, aiSnake.y - aiSnake.segments[0].y) > 5) {
+                aiSnake.segments.unshift({x: aiSnake.x, y: aiSnake.y});
+                if(aiSnake.segments.length > bodyLength) {
+                    aiSnake.segments.pop();
+                }
+            }
+
+            aiSnake.x = Math.max(0, Math.min(canvas.width, aiSnake.x));
+            aiSnake.y = Math.max(0, Math.min(canvas.height, aiSnake.y));
+        }
+
+        function update() {
+            let speed = isMouseDown ? boostSpeed : baseSpeed;
+            
+            aiSnakes.forEach((aiSnake, index) => {
+                updateAISnake(aiSnake);
+                
+                if(checkSnakeCollisions(aiSnake.x, aiSnake.y, snake.segments)) {
+                    aiSnakes[index] = killSnake(aiSnake);
+                }
+                
+                if(checkSnakeCollisions(snake.x, snake.y, aiSnake.segments)) {
+                    resetGame();
+                    return;
+                }
+                
+                aiSnakes.forEach((otherSnake, otherIndex) => {
+                    if(index !== otherIndex && checkSnakeCollisions(aiSnake.x, aiSnake.y, otherSnake.segments)) {
+                        aiSnakes[index] = killSnake(aiSnake);
+                    }
+                });
+            });
+
+            let dx = mousePos.x - snake.x;
+            let dy = mousePos.y - snake.y;
+            let targetAngle = Math.atan2(dy, dx);
+            let angleDiff = targetAngle - snake.angle;
+            if (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+            if (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+            snake.angle += angleDiff * 0.2;
+            
+            snake.x += Math.cos(snake.angle) * speed;
+            snake.y += Math.sin(snake.angle) * speed;
+
+            if (snake.segments.length === 0 || Math.hypot(snake.x - snake.segments[0].x, snake.y - snake.segments[0].y) > 5) {
+                snake.segments.unshift({x: snake.x, y: snake.y});
+                if(snake.segments.length > bodyLength) {
+                    snake.segments.pop();
+                }
+            }
+
+            snakeDrops.forEach((drop, index) => {
+                if (Math.hypot(snake.x - drop.x, snake.y - drop.y) < 15) {
+                    bodyLength = Math.min(50, bodyLength + 2);
+                    snakeDrops.splice(index, 1);
+                }
+                
+                aiSnakes.forEach(aiSnake => {
+                    if (Math.hypot(aiSnake.x - drop.x, aiSnake.y - drop.y) < 15) {
+                        aiSnake.color = drop.color;
+                        aiSnake.segments = aiSnake.segments.slice(0, Math.min(50, aiSnake.segments.length * 2));
+                        snakeDrops.splice(index, 1);
+                    }
+                });
+            });
+
+
+            snake.x = Math.max(0, Math.min(canvas.width, snake.x));
+            snake.y = Math.max(0, Math.min(canvas.height, snake.y));
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            snakeDrops.forEach(drop => {
+                ctx.fillStyle = drop.color;
+                ctx.beginPath();
+                ctx.arc(drop.x, drop.y, drop.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            snake.segments.forEach((segment, i) => {
+                ctx.fillStyle = snake.color;
+                ctx.beginPath();
+                ctx.arc(segment.x, segment.y, 10 - (i * 0.1), 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            aiSnakes.forEach(aiSnake => {
+                aiSnake.segments.forEach((segment, i) => {
+                    ctx.fillStyle = aiSnake.color;
+                    ctx.beginPath();
+                    ctx.arc(segment.x, segment.y, 10 - (i * 0.1), 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            });
+        }
+
+        function gameLoop() {
+            if (!gameRunning) return;
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        canvas.addEventListener('mousemove', (e) => {
+            let rect = canvas.getBoundingClientRect();
+            mousePos.x = e.clientX - rect.left;
+            mousePos.y = e.clientY - rect.top;
+        });
+
+        document.addEventListener('mousedown', () => isMouseDown = true);
+        document.addEventListener('mouseup', () => isMouseDown = false);
+
+        resetGame();
+    </script>
+</body>
+</html>
