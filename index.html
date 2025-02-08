@@ -204,26 +204,35 @@
             if (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
             aiSnake.angle += angleDiff * 0.1;
             aiSnake.speed = aiSnake.state === 'fleeing' ? 4 : 3;
-            aiSnake.x += Math.cos(aiSnake.angle) * aiSnake.speed;
-            aiSnake.y += Math.sin(aiSnake.angle) * aiSnake.speed;
+            
+            let newX = aiSnake.x + Math.cos(aiSnake.angle) * aiSnake.speed;
+            let newY = aiSnake.y + Math.sin(aiSnake.angle) * aiSnake.speed;
+
+            // Check if the new position would touch the wall
+            if (isTouchingWall(newX, newY, 10)) {
+                return true; // Indicate that this AI snake should be killed
+            }
+
+            aiSnake.x = newX;
+            aiSnake.y = newY;
+
             if (aiSnake.segments.length === 0 || Math.hypot(aiSnake.x - aiSnake.segments[0].x, aiSnake.y - aiSnake.segments[0].y) > 5) {
                 aiSnake.segments.unshift({x: aiSnake.x, y: aiSnake.y});
                 if(aiSnake.segments.length > bodyLength) {
                     aiSnake.segments.pop();
                 }
             }
-            aiSnake.x = Math.max(0, Math.min(canvas.width, aiSnake.x));
-            aiSnake.y = Math.max(0, Math.min(canvas.height, aiSnake.y));
-        }
-
-        function isTouchingWall(x, y, radius) {
-            return x - radius <= 0 || x + radius >= canvas.width || y - radius <= 0 || y + radius >= canvas.height;
+            return false; // Indicate that this AI snake is still alive
         }
 
         function update() {
             let speed = isMouseDown ? boostSpeed : baseSpeed;
             aiSnakes.forEach((aiSnake, index) => {
-                updateAISnake(aiSnake);
+                if(updateAISnake(aiSnake)) {
+                    // AI snake touched the wall, kill it
+                    aiSnakes[index] = killSnake(aiSnake);
+                    return;
+                }
                 if(checkSnakeCollisions(aiSnake.x, aiSnake.y, snake.segments)) {
                     aiSnakes[index] = killSnake(aiSnake);
                 }
