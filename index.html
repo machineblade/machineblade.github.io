@@ -184,6 +184,10 @@
             }
             return false;
         }
+        function isTouchingWall(x, y, radius) {
+    return x - radius <= 0 || x + radius >= canvas.width || y - radius <= 0 || y + radius >= canvas.height;
+}
+
 
         function updateAISnake(aiSnake) {
             let dx = snake.x - aiSnake.x;
