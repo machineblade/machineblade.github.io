@@ -1,339 +1,87 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Snake Cursor Game</title>
-    <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-        }
-        canvas {
-            display: block;
-        }
-        #mainMenu, #settings {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 20px;
-            border-radius: 10px;
-            color: white;
-        }
-        .menu-button {
-            display: block;
-            width: 200px;
-            padding: 15px;
-            margin: 10px auto;
-            font-size: 18px;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .menu-button:hover {
-            background: #45a049;
-        }
-        #gameControls {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            display: none;
-        }
-        #settings {
-            display: none;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>cool website</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css?family=Comic+Sans+MS:400,700&display=swap');
+    body {
+      font-family: Arial, sans-serif;
+      background: url('roblox.png') no-repeat center center fixed;
+      background-size: cover;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    h1 {
+      font-family: 'Comic Sans MS', 'Comic Sans', cursive, sans-serif;
+      font-size: 3em;
+      color: #5f27ae;
+      text-align: center;
+      margin-top: 32px;
+      margin-bottom: 40px;
+      width: 100vw;
+      position:absolute;
+      top: 0;
+      left: 0;
+      background: #868686;
+    }
+    .button-container {
+      margin-bottom: 30px;
+      margin-top: 100px;
+    }
+    button {
+      padding: 15px 30px;
+      margin: 0 15px;
+      border: none;
+      border-radius: 18px;
+      background-color: #27ae60;
+      color: white;
+      font-size: 1.1em;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(39, 174, 96, 0.25);
+      transition: 
+        background 0.2s,
+        transform 0.15s,
+        box-shadow 0.15s;
+    }
+    button:hover {
+      background-color: #2ecc71;
+      transform: translateY(-6px);
+      box-shadow: 0 10px 24px rgba(39, 174, 96, 0.35);
+    }
+    button:active {
+      background-color: #219150;
+      transform: translateY(-2px);
+      box-shadow: 0 2px 8px rgba(39, 174, 96, 0.20);
+    }
+    .rounded-square {
+      width: 300px;
+      height: 150px;
+      background: white;
+      border-radius: 25px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3em;
+      color: #333;
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
-    <canvas id="gameCanvas"></canvas>
-    <div id="mainMenu">
-        <h1>Snake Cursor Game</h1>
-        <button class="menu-button" onclick="startGame()">Start Game</button>
-        <button class="menu-button" onclick="showSettings()">Settings</button>
-    </div>
-    <div id="gameControls">
-        <button onclick="showMainMenu()">Back to Menu</button>
-    </div>
-    <div id="settings">
-        <h2>Settings</h2>
-        <div>
-            <label>Player Snake Color:</label>
-            <input type="color" id="playerColor" value="#00FF00" onchange="changePlayerColor(this.value)">
-        </div>
-        <button class="menu-button" onclick="hideSettings()">Back</button>
-    </div>
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        let gameRunning = false;
-        let snakeDrops = [];
-        let playerColor = '#00FF00';
-        let isMouseDown = false;
-        let baseSpeed = 3;
-        let boostSpeed = 8;
-
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
-
-        let snake = {
-            x: canvas.width/2,
-            y: canvas.height/2,
-            angle: 0,
-            segments: [],
-            hasLog: false,
-            color: '#00FF00'
-        };
-        let mousePos = {x: 0, y: 0};
-        let bodyLength = 5;
-        let walls = [];
-        let aiSnakes = [];
-
-        function createAISnake() {
-            return {
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                angle: Math.random() * Math.PI * 2,
-                segments: [],
-                targetX: Math.random() * canvas.width,
-                targetY: Math.random() * canvas.height,
-                speed: 3,
-                color: `hsl(${Math.random() * 360}, 70%, 50%)`,
-                state: 'roaming'
-            };
-        }
-
-        function showSettings() {
-            document.getElementById('mainMenu').style.display = 'none';
-            document.getElementById('settings').style.display = 'block';
-        }
-
-        function hideSettings() {
-            document.getElementById('settings').style.display = 'none';
-            document.getElementById('mainMenu').style.display = 'block';
-        }
-
-        function startGame() {
-            document.getElementById('mainMenu').style.display = 'none';
-            document.getElementById('gameControls').style.display = 'block';
-            gameRunning = true;
-            resetGame();
-            gameLoop();
-        }
-
-        function showMainMenu() {
-            gameRunning = false;
-            document.getElementById('mainMenu').style.display = 'block';
-            document.getElementById('gameControls').style.display = 'none';
-        }
-
-        function killSnake(deadSnake) {
-            for(let i = 0; i < deadSnake.segments.length; i += 3) {
-                createSnakeDrop(
-                    deadSnake.segments[i].x,
-                    deadSnake.segments[i].y,
-                    deadSnake.color || playerColor
-                );
-            }
-            return createAISnake();
-        }
-
-        function resetGame() {
-            snake.x = canvas.width/2;
-            snake.y = canvas.height/2;
-            snake.angle = 0;
-            snake.segments = [];
-            snake.hasLog = false;
-            bodyLength = 5;
-            aiSnakes = [];
-            for(let i = 0; i < 10; i++) {
-                aiSnakes.push(createAISnake());
-            }
-            snakeDrops = [];
-        }
-
-        function changePlayerColor(color) {
-            playerColor = color;
-            snake.color = color;
-        }
-
-        function createSnakeDrop(x, y, color) {
-            snakeDrops.push({
-                x: x,
-                y: y,
-                color: color,
-                size: 8
-            });
-        }
-
-        function checkSnakeCollisions(x, y, segments, excludeHead = false) {
-            let start = excludeHead ? 3 : 0;
-            for(let i = start; i < segments.length; i++) {
-                if(Math.hypot(x - segments[i].x, y - segments[i].y) < 15) {
-                    return true;
-                }
-            }
-            return false;
-        }
-        function isTouchingWall(x, y, radius) {
-    return x - radius <= 0 || x + radius >= canvas.width || y - radius <= 0 || y + radius >= canvas.height;
-}
-
-
-        function updateAISnake(aiSnake) {
-            let dx = snake.x - aiSnake.x;
-            let dy = snake.y - aiSnake.y;
-            let distToPlayer = Math.hypot(dx, dy);
-            if(distToPlayer < 150) {
-                aiSnake.state = 'fleeing';
-                aiSnake.targetX = aiSnake.x - dx * 2;
-                aiSnake.targetY = aiSnake.y - dy * 2;
-            } else if(Math.hypot(aiSnake.x - aiSnake.targetX, aiSnake.y - aiSnake.targetY) < 50) {
-                aiSnake.state = 'roaming';
-                aiSnake.targetX = Math.random() * canvas.width;
-                aiSnake.targetY = Math.random() * canvas.height;
-            }
-            let targetAngle = Math.atan2(aiSnake.targetY - aiSnake.y, aiSnake.targetX - aiSnake.x);
-            let angleDiff = targetAngle - aiSnake.angle;
-            if (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-            if (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-            aiSnake.angle += angleDiff * 0.1;
-            aiSnake.speed = aiSnake.state === 'fleeing' ? 4 : 3;
-            
-            let newX = aiSnake.x + Math.cos(aiSnake.angle) * aiSnake.speed;
-            let newY = aiSnake.y + Math.sin(aiSnake.angle) * aiSnake.speed;
-
-            // Check if the new position would touch the wall
-            if (isTouchingWall(newX, newY, 10)) {
-                return true; // Indicate that this AI snake should be killed
-            }
-
-            aiSnake.x = newX;
-            aiSnake.y = newY;
-
-            if (aiSnake.segments.length === 0 || Math.hypot(aiSnake.x - aiSnake.segments[0].x, aiSnake.y - aiSnake.segments[0].y) > 5) {
-                aiSnake.segments.unshift({x: aiSnake.x, y: aiSnake.y});
-                if(aiSnake.segments.length > bodyLength) {
-                    aiSnake.segments.pop();
-                }
-            }
-            return false; // Indicate that this AI snake is still alive
-        }
-
-        function update() {
-            let speed = isMouseDown ? boostSpeed : baseSpeed;
-            aiSnakes.forEach((aiSnake, index) => {
-                if(updateAISnake(aiSnake)) {
-                    // AI snake touched the wall, kill it
-                    aiSnakes[index] = killSnake(aiSnake);
-                    return;
-                }
-                if(checkSnakeCollisions(aiSnake.x, aiSnake.y, snake.segments)) {
-                    aiSnakes[index] = killSnake(aiSnake);
-                }
-                if(checkSnakeCollisions(snake.x, snake.y, aiSnake.segments)) {
-                    resetGame();
-                    return;
-                }
-                aiSnakes.forEach((otherSnake, otherIndex) => {
-                    if(index !== otherIndex && checkSnakeCollisions(aiSnake.x, aiSnake.y, otherSnake.segments)) {
-                        aiSnakes[index] = killSnake(aiSnake);
-                    }
-                });
-            });
-
-            let dx = mousePos.x - snake.x;
-            let dy = mousePos.y - snake.y;
-            let targetAngle = Math.atan2(dy, dx);
-            let angleDiff = targetAngle - snake.angle;
-            if (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-            if (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-            snake.angle += angleDiff * 0.2;
-
-            let newX = snake.x + Math.cos(snake.angle) * speed;
-            let newY = snake.y + Math.sin(snake.angle) * speed;
-
-            // Check if the new position would touch the wall
-            if (isTouchingWall(newX, newY, 10)) {
-                resetGame();
-                return;
-            }
-
-            snake.x = newX;
-            snake.y = newY;
-
-            if (snake.segments.length === 0 || Math.hypot(snake.x - snake.segments[0].x, snake.y - snake.segments[0].y) > 5) {
-                snake.segments.unshift({x: snake.x, y: snake.y});
-                if(snake.segments.length > bodyLength) {
-                    snake.segments.pop();
-                }
-            }
-
-            snakeDrops.forEach((drop, index) => {
-                if (Math.hypot(snake.x - drop.x, snake.y - drop.y) < 15) {
-                    bodyLength = Math.min(50, bodyLength + 2);
-                    snakeDrops.splice(index, 1);
-                }
-                aiSnakes.forEach(aiSnake => {
-                    if (Math.hypot(aiSnake.x - drop.x, aiSnake.y - drop.y) < 15) {
-                        aiSnake.color = drop.color;
-                        aiSnake.segments = aiSnake.segments.slice(0, Math.min(50, aiSnake.segments.length * 2));
-                        snakeDrops.splice(index, 1);
-                    }
-                });
-            });
-        }
-
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            snakeDrops.forEach(drop => {
-                ctx.fillStyle = drop.color;
-                ctx.beginPath();
-                ctx.arc(drop.x, drop.y, drop.size, 0, Math.PI * 2);
-                ctx.fill();
-            });
-            snake.segments.forEach((segment, i) => {
-                ctx.fillStyle = snake.color;
-                ctx.beginPath();
-                ctx.arc(segment.x, segment.y, 10 - (i * 0.1), 0, Math.PI * 2);
-                ctx.fill();
-            });
-            aiSnakes.forEach(aiSnake => {
-                aiSnake.segments.forEach((segment, i) => {
-                    ctx.fillStyle = aiSnake.color;
-                    ctx.beginPath();
-                    ctx.arc(segment.x, segment.y, 10 - (i * 0.1), 0, Math.PI * 2);
-                    ctx.fill();
-                });
-            });
-        }
-
-        function gameLoop() {
-            if (!gameRunning) return;
-            update();
-            draw();
-            requestAnimationFrame(gameLoop);
-        }
-
-        canvas.addEventListener('mousemove', (e) => {
-            let rect = canvas.getBoundingClientRect();
-            mousePos.x = e.clientX - rect.left;
-            mousePos.y = e.clientY - rect.top;
-        });
-
-        document.addEventListener('mousedown', () => isMouseDown = true);
-        document.addEventListener('mouseup', () => isMouseDown = false);
-
-        resetGame();
-    </script>
+  <h1>MachineBlades Website</h1>
+  <div class="button-container">
+    <button onclick="window.open('https://github.com/machineblade', '_blank')">Go to My Github</button>
+    <button onclick="window.location.href='snakegame.html'">Snake game</button>
+    <button onclick="window.location.href='squaregame.html'">Square simulator</button>
+  </div>
+  <div class="rounded-square">
+    <p>This is the new updated website for my original website, thanks for visiting!</p>
+  </div>
 </body>
 </html>
