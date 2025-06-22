@@ -599,7 +599,7 @@
             
             update() {
                 this.age += 0.05;
-                this.hunger -= 0.05;
+                this.hunger -= 0.0005;
                 this.idleTimer++;
                 this.directionChangeTimer--;
                 this.combatCooldown = Math.max(0, this.combatCooldown - 1);
