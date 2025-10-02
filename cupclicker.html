@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cup Clicker</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to bottom, #ffffff, #f0f0f0);
+      margin: 0;
+      padding: 0;
+      text-align: center;
+      color: #333;
+    }
+
+    h1 {
+      margin-top: 60px;
+      font-size: 3em;
+      color: #444;
+    }
+
+    #cup {
+      width: 160px;
+      height: auto;
+      margin: 30px 0;
+      cursor: pointer;
+      transition: transform 0.1s ease;
+    }
+
+    #cup:active {
+      transform: scale(0.95);
+    }
+
+    #cups {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 30px;
+    }
+
+    /* Toggle Shop Button */
+    #toggle-shop {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #0078d7;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      width: 40px;
+      height: 40px;
+      line-height: 40px;
+      text-align: center;
+      border-radius: 50%;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+      user-select: none;
+      z-index: 1000;
+    }
+
+    /* Shop Panel */
+    #shop {
+      position: fixed;
+      top: 20px;
+      right: 70px;
+      width: 320px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+      padding: 20px;
+      display: none;
+      flex-direction: column;
+      z-index: 999;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    .shop-item {
+      background: #f9f9f9;
+      padding: 15px;
+      border-radius: 6px;
+      box-shadow: inset 0 0 3px rgba(0,0,0,0.05);
+      margin-bottom: 15px;
+      text-align: left;
+    }
+
+    .shop-item strong {
+      display: block;
+      font-size: 18px;
+      margin-bottom: 5px;
+    }
+
+    .shop-item button {
+      background: #0078d7;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.2s ease;
+    }
+
+    .shop-item button:disabled {
+      background: #aaa;
+      cursor: not-allowed;
+    }
+
+    .shop-item button:hover:not(:disabled) {
+      background: #005ea6;
+    }
+
+    #reset-button {
+      margin-top: 10px;
+      padding: 8px 16px;
+      font-size: 16px;
+      background: #d9534f;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    #reset-button:hover {
+      background: #c9302c;
+    }
+
+    @media (max-width: 500px) {
+      #shop {
+        width: 90%;
+        right: 55px;
+      }
+      #toggle-shop {
+        top: 10px;
+        right: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="toggle-shop">&gt;</div>
+
+  <div id="shop">
+    <!-- Cursor Upgrade -->
+    <div class="shop-item">
+      <strong>Cursor</strong> (+5 per click)<br>
+      Cost: <span id="cursor-cost">50</span> cups<br>
+      <button id="btn-cursor" onclick="buyUpgrade('cursor')">Buy</button>
+    </div>
+    <!-- Cup Generator -->
+    <div class="shop-item">
+      <strong>Cup Generator</strong> (+5 per second)<br>
+      Cost: <span id="generator-cost">100</span> cups<br>
+      <button id="btn-generator" onclick="buyUpgrade('generator')">Buy</button>
+    </div>
+    <!-- New shop option: Double Click Power -->
+    <div class="shop-item">
+      <strong>Double Power</strong> (double your clicks for a short time)<br>
+      Cost: <span id="double-cost">1000</span> cups<br>
+      <button id="btn-double" onclick="buyUpgrade('double')">Buy</button>
+    </div>
+    <!-- New shop option: Auto Clicker -->
+    <div class="shop-item">
+      <strong>Auto Clicker</strong> (+22 clicks per second)<br>
+      Cost: <span id="autoclicker-cost">500</span> cups<br>
+      <button id="btn-autoclicker" onclick="buyUpgrade('autoclicker')">Buy</button>
+    </div>
+
+    <button id="reset-button" onclick="resetGame()">Reset Game</button>
+  </div>
+
+  <h1>Cup Clicker</h1>
+  <img id="cup" src="images/cup.png" alt="Cup" />
+  <div id="cups">Cups: 0</div>
+
+  <audio id="click-sound" src="sounds/clickCup.wav" preload="auto"></audio>
+  <audio id="open-sound" src="sounds/openShop.wav" preload="auto"></audio>
+  <audio id="buy-sound" src="sounds/buyItem.wav" preload="auto"></audio>
+
+  <script>
+    // Suffixes for formatting large numbers
+    const SUFFIXES = ["", "k", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "De"];
+
+    function formatNumber(num) {
+      if (typeof num !== "number" && typeof num !== "bigint") {
+        num = Number(num);
+      }
+      if (num < 1000) {
+        return num.toString();
+      }
+      let exponent = 0;
+      let n = num;
+      while (n >= 1000 && exponent < SUFFIXES.length - 1) {
+        n /= 1000;
+        exponent++;
+      }
+      const rounded = n.toFixed(2).replace(/\.?0+$/, "");
+      return rounded + SUFFIXES[exponent];
+    }
+
+    // Game state variables
+    let cups = 0;
+    let cupsPerClick = 1;
+    let cupsPerSecond = 0;
+
+    // New shop mechanics
+    let doublePowerCost = 1000;
+    let autoclickerCost = 500;
+
+    let doubleActive = false;
+    let doubleTimer = 0;  // seconds remaining when double is active
+    const DOUBLE_DURATION = 10; // double effect lasts 10 seconds
+
+    // Fixed costs for the basic upgrades
+    const cursorCost = 50;
+    const generatorCost = 100;
+
+    const cupsDisplay = document.getElementById('cups');
+    const shopPanel = document.getElementById('shop');
+    const toggleButton = document.getElementById('toggle-shop');
+
+    const clickSound = document.getElementById('click-sound');
+    const openSound = document.getElementById('open-sound');
+    const buySound = document.getElementById('buy-sound');
+
+    // Buttons for enabling/disabling
+    const btnCursor = document.getElementById('btn-cursor');
+    const btnGenerator = document.getElementById('btn-generator');
+    const btnDouble = document.getElementById('btn-double');
+    const btnAutoclicker = document.getElementById('btn-autoclicker');
+
+    // Load saved state
+    window.onload = function() {
+      const saved = JSON.parse(localStorage.getItem('cupClickerSave'));
+      if (saved) {
+        cups = saved.cups ?? 0;
+        cupsPerClick = saved.cupsPerClick ?? 1;
+        cupsPerSecond = saved.cupsPerSecond ?? 0;
+        doubleActive = saved.doubleActive ?? false;
+        doubleTimer = saved.doubleTimer ?? 0;
+        autoclickerBought = saved.autoclickerBought ?? 0;
+        // Note: costs fixed, so not saved for cursor/generator
+      }
+      updateDisplay();
+      updateButtons();
+    };
+
+    // Save state every second
+    setInterval(() => {
+      localStorage.setItem('cupClickerSave', JSON.stringify({
+        cups,
+        cupsPerClick,
+        cupsPerSecond,
+        doubleActive,
+        doubleTimer
+      }));
+    }, 1000);
+
+    // Click the cup
+    document.getElementById('cup').addEventListener('click', () => {
+      let gain = cupsPerClick;
+      if (doubleActive) {
+        gain *= 2;
+      }
+      cups += gain;
+      if (clickSound) {
+        clickSound.currentTime = 0;
+        clickSound.play();
+      }
+      updateDisplay();
+      updateButtons();
+    });
+
+    function updateDisplay() {
+      cupsDisplay.innerText = `Cups: ${formatNumber(cups)}`;
+      document.getElementById('cursor-cost').innerText = formatNumber(cursorCost);
+      document.getElementById('generator-cost').innerText = formatNumber(generatorCost);
+      document.getElementById('double-cost').innerText = formatNumber(doublePowerCost);
+      document.getElementById('autoclicker-cost').innerText = formatNumber(autoclickerCost);
+    }
+
+    function updateButtons() {
+      btnCursor.disabled = (cups < cursorCost);
+      btnGenerator.disabled = (cups < generatorCost);
+      btnDouble.disabled = (cups < doublePowerCost);
+      btnAutoclicker.disabled = (cups < autoclickerCost);
+    }
+
+    function buyUpgrade(type) {
+      if (type === 'cursor' && cups >= cursorCost) {
+        cups -= cursorCost;
+        cupsPerClick += 5;
+      }
+      else if (type === 'generator' && cups >= generatorCost) {
+        cups -= generatorCost;
+        cupsPerSecond += 5;
+      }
+      else if (type === 'double' && cups >= doublePowerCost) {
+        cups -= doublePowerCost;
+        doubleActive = true;
+        doubleTimer = DOUBLE_DURATION;
+      }
+      else if (type === 'autoclicker' && cups >= autoclickerCost) {
+        cups -= autoclickerCost;
+        // Autoclicker: simulate one click per second
+        cupsPerSecond += 0; // we handle it via separate interval
+        startAutoClicker();
+      }
+
+      if (buySound) {
+        buySound.currentTime = 0;
+        buySound.play();
+      }
+
+      updateDisplay();
+      updateButtons();
+    }
+
+    // Passive income + autoclicker & double timer handling
+    setInterval(() => {
+      cups += cupsPerSecond;
+
+      // Handle double timer
+      if (doubleActive) {
+        doubleTimer--;
+        if (doubleTimer <= 0) {
+          doubleActive = false;
+          doubleTimer = 0;
+        }
+      }
+
+      updateDisplay();
+      updateButtons();
+    }, 1000);
+
+    // Autoclicker: triggers a click automatically each second
+    function startAutoClicker() {
+      if (!window._autoClickerInterval) {
+        window._autoClickerInterval = setInterval(() => {
+          document.getElementById('cup').click();
+          document.getElementById('cup').click();
+          document.getElementById('cup').click();
+          document.getElementById('cup').click();
+          document.getElementById('cup').click();
+          document.getElementById('cup').click();
+          document.getElementById('cup').click();
+          document.getElementById('cup').click();
+          document.getElementById('cup').click();
+          document.getElementById('cup').click();
+          document.getElementById('cup').click();
+          document.getElementById('cup').click();
+          document.getElementById('cup').click();
+          document.getElementById('cup').click();
+          document.getElementById('cup').click();
+          document.getElementById('cup').click();
+          document.getElementById('cup').click();
+          document.getElementById('cup').click();
+          document.getElementById('cup').click();
+          document.getElementById('cup').click();
+          document.getElementById('cup').click();
+          document.getElementById('cup').click();
+        }, 1000);
+      }
+    }
+
+    function resetGame() {
+      if (confirm("Are you sure you want to reset all progress?")) {
+        localStorage.removeItem('cupClickerSave');
+        location.reload();
+      }
+    }
+
+    toggleButton.addEventListener('click', () => {
+      const isOpen = shopPanel.style.display === 'flex';
+      shopPanel.style.display = isOpen ? 'none' : 'flex';
+      if (openSound) {
+        openSound.currentTime = 0;
+        openSound.play();
+      }
+    });
+
+  </script>
+</body>
+</html>
