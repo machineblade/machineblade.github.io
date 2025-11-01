@@ -1,441 +1,497 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Gravity Squares with Menu</title>
-  <style>
-    body {
-      background: #222;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-    }
-    canvas {
-      background: #fff;
-      border: 4px solid #333;
-      border-radius: 12px;
-      box-shadow: 0 6px 24px rgba(0,0,0,0.3);
-      display: block;
-    }
-    #contextMenu {
-      position: absolute;
-      display: none;
-      background: #fff;
-      border-radius: 12px;
-      padding: 10px 0;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.18);
-      min-width: 120px;
-      z-index: 10;
-      font-family: Arial, sans-serif;
-    }
-    .menu-btn {
-      background: none;
-      border: none;
-      width: 100%;
-      text-align: left;
-      padding: 10px 18px;
-      font-size: 1em;
-      cursor: pointer;
-      transition: background 0.15s;
-      border-radius: 0;
-    }
-    .menu-btn:hover {
-      background: #f0f0f0;
-    }
-    #topLeftBtn {
-      position: absolute;
-      top: 24px;
-      left: 24px;
-      padding: 12px 24px;
-      background: #3498db;
-      color: #fff;
-      border: none;
-      border-radius: 10px;
-      font-size: 1em;
-      box-shadow: 0 2px 8px rgba(52,152,219,0.18);
-      cursor: pointer;
-      transition: background 0.18s, transform 0.12s;
-      z-index: 100;
-    }
-    #topLeftBtn:hover {
-      background: #217dbb;
-      transform: translateY(-2px) scale(1.04);
-    }
-  </style>
+ <meta charset="UTF-8">
+ <title>Gravity Squares</title>
+ <style>
+   body {
+     background: #222;
+     display: flex;
+     justify-content: center;
+     align-items: center;
+     height: 100vh;
+     margin: 0;
+   }
+   canvas {
+     background: #fff;
+     border: 4px solid #333;
+     border-radius: 12px;
+     box-shadow: 0 6px 24px rgba(0,0,0,0.3);
+     display: block;
+   }
+   #contextMenu {
+     position: absolute;
+     display: none;
+     background: #fff;
+     border-radius: 12px;
+     padding: 10px 0;
+     box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+     min-width: 120px;
+     z-index: 10;
+     font-family: Arial, sans-serif;
+   }
+   .menu-btn {
+     background: none;
+     border: none;
+     width: 100%;
+     text-align: left;
+     padding: 10px 18px;
+     font-size: 1em;
+     cursor: pointer;
+     border-radius: 0;
+   }
+   .menu-btn:hover {
+     background: #f0f0f0;
+   }
+   #mathEquation {
+     position: absolute;
+     top: 24px;
+     left: 283px;
+     padding: 12px 24px;
+     background: #3498db;
+     color: white;
+     border-radius: 2px;
+ font-size: 1em;
+     box-shadow: 0 2px 8px rgba(52,152,219,0.18);
+     z-index: 100;
+   }
+ #mathEquationAnswer {
+     position: absolute;
+     top: 24px;
+     left: 565px;
+     padding: 12px 24px;
+     background: #3498db;
+     color: white;
+     border-radius: 2px;
+ font-size: 1em;
+     box-shadow: 0 2px 8px rgba(52,152,219,0.18);
+     z-index: 100;
+   }
+ #checkAnswer {
+     position: absolute;
+     top: 24px;
+     left: 848px;
+     padding: 12px 24px;
+     background: #3498db;
+     color: white;
+     border-radius: 2px;
+     font-size: 1em;
+     box-shadow: 0 2px 8px rgba(52,152,219,0.18);
+     z-index: 100;
+   }
+ #generateRandomMath {
+     position: absolute;
+     top: 70px;
+     left: 848px;
+     padding: 12px 24px;
+     background: #3498db;
+     color: white;
+     border-radius: 2px;
+ font-size: 1em;
+     box-shadow: 0 2px 8px rgba(52,152,219,0.18);
+     z-index: 100;
+   }
+ </style>
 </head>
 <body>
-<button id="topLeftBtn" onclick="window.location.href='index.html'">Back</button>
-<canvas id="game" width="800" height="600"></canvas>
-<div id="contextMenu"></div>
-<script>
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
+<input type="text" id="mathEquation">
+<input type="text" id="mathEquationAnswer" placeholder="Answer here...">
+<button id="checkAnswer" onclick="checkAnswer()">Click to Check Answer!</button>
+<button id="generateRandomMath" onclick="randomMath()">Click to generate a new math equation! </button>
 
-const BASE_GRAVITY = 1.0;
-const FRICTION = 0.85;
-const SQUARE_SIZE = 50;
-const WALL_THICKNESS = 8;
-const SPRING_STIFFNESS = 0.1;
-const SPRING_LENGTH = 90;
 
-let squares = [
-  { x: 200, y: 100, vx: 0, vy: 0, held: false, frozen: false }
-];
-let springs = [];
+ <canvas id="game" width="800" height="600"></canvas>
+ <div id="contextMenu"></div>
 
-let dragging = null;
-let dragOffset = {x:0, y:0};
-let rightDragging = false;
-let rightDragStart = null;
 
-let hoveredSquare = null;
-let menuSquareIndex = null;
+ <script>
+   const canvas = document.getElementById('game');
+   const ctx = canvas.getContext('2d');
+   const menu = document.getElementById('contextMenu');
+   const math = document.getElementById('mathEquation');
+ const mathAnswer = document.getElementById('mathEquationAnswer')
+ let answer;
+ function randomMath() {
+   let x = Math.floor(Math.random() * 5) + 1 // 1 - 6
+   let y = Math.floor(Math.random() * 5) + 1 // 1 - 6
+   answer = x * y;
+   math.value = `${x} * ${y} = ?`
+ }
+ function checkAnswer() {
+   if (parseInt(mathAnswer.value) === answer) {
+     mathAnswer.value = "Correct!";
+     setTimeout(() => {
+       mathAnswer.value = ""
+       randomMath()
+     }, 2000);
+   } else {
+     mathAnswer.value = "Incorrect YOU SUCk!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!";
+     setTimeout(() => {
+       mathAnswer.value = ""
+       randomMath()
+     }, 2000);
+   }
+ }
+   const BASE_GRAVITY = 1.0;
+   const FRICTION = 0.85;
+   const SQUARE_SIZE = 50;
+   const WALL_THICKNESS = 2;
+   const SPRING_STIFFNESS = 0.3;
+   const SPRING_LENGTH = 90;
 
-// --- Collision Helper ---
-function resolveSquareCollisions() {
-  for (let i = 0; i < squares.length; i++) {
-    for (let j = i + 1; j < squares.length; j++) {
-      let a = squares[i];
-      let b = squares[j];
-      if (a.held || b.held) continue; // Don't collide held squares
 
-      // AABB collision
-      if (
-        a.x < b.x + SQUARE_SIZE &&
-        a.x + SQUARE_SIZE > b.x &&
-        a.y < b.y + SQUARE_SIZE &&
-        a.y + SQUARE_SIZE > b.y
-      ) {
-        let overlapX = Math.min(a.x + SQUARE_SIZE, b.x + SQUARE_SIZE) - Math.max(a.x, b.x);
-        let overlapY = Math.min(a.y + SQUARE_SIZE, b.y + SQUARE_SIZE) - Math.max(a.y, b.y);
+   let squares = [{ x: 200, y: 100, vx: 0, vy: 0, held: false, frozen: false }];
+   let springs = [];
 
-        if (a.frozen && b.frozen) {
-          // Both are frozen: do nothing
-          continue;
-        } else if (a.frozen || b.frozen) {
-          // Only one is frozen
-          let moving = a.frozen ? b : a;
-          let frozen = a.frozen ? a : b;
-          if (overlapX < overlapY) {
-            let push = overlapX;
-            if (moving.x < frozen.x) {
-              moving.x -= push;
-            } else {
-              moving.x += push;
-            }
-            moving.vx = 0;
-          } else {
-            let push = overlapY;
-            if (moving.y < frozen.y) {
-              moving.y -= push;
-            } else {
-              moving.y += push;
-            }
-            moving.vy = 0;
-          }
-        } else {
-          // Neither is frozen: push both and exchange velocities
-          if (overlapX < overlapY) {
-            let push = overlapX / 2;
-            if (a.x < b.x) {
-              a.x -= push;
-              b.x += push;
-            } else {
-              a.x += push;
-              b.x -= push;
-            }
-            let temp = a.vx;
-            a.vx = b.vx;
-            b.vx = temp;
-          } else {
-            let push = overlapY / 2;
-            if (a.y < b.y) {
-              a.y -= push;
-              b.y += push;
-            } else {
-              a.y += push;
-              b.y -= push;
-            }
-            let temp = a.vy;
-            a.vy = b.vy;
-            b.vy = temp;
-          }
-        }
-      }
-    }
-  }
-}
 
-function drawWalls() {
-  ctx.fillStyle = "#333";
-  ctx.fillRect(0, 0, canvas.width, WALL_THICKNESS);
-  ctx.fillRect(0, canvas.height - WALL_THICKNESS, canvas.width, WALL_THICKNESS);
-  ctx.fillRect(0, 0, WALL_THICKNESS, canvas.height);
-  ctx.fillRect(canvas.width - WALL_THICKNESS, 0, WALL_THICKNESS, canvas.height);
-}
+   let dragging = null;
+   let dragOffset = { x: 0, y: 0 };
+   let rightDragging = false;
+   let rightDragStart = null;
 
-function drawSquares() {
-  for (const sq of squares) {
-    ctx.save();
-    ctx.fillStyle = sq.frozen ? "#85c1e9" : "#3498db";
-    ctx.strokeStyle = "#226699";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.rect(sq.x, sq.y, SQUARE_SIZE, SQUARE_SIZE);
-    ctx.fill();
-    ctx.stroke();
-    ctx.restore();
-  }
-}
 
-function drawSprings() {
-  for (const spring of springs) {
-    const a = squares[spring.a];
-    const b = squares[spring.b];
-    ctx.strokeStyle = "#888";
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(a.x + SQUARE_SIZE/2, a.y + SQUARE_SIZE/2);
-    ctx.lineTo(b.x + SQUARE_SIZE/2, b.y + SQUARE_SIZE/2);
-    ctx.stroke();
-  }
-}
+   let hoveredSquare = null;
+   let menuSquareIndex = null;
 
-function updatePhysics() {
-  for (let i = 0; i < squares.length; i++) {
-    let sq = squares[i];
-    if (!sq.held && !sq.frozen) {
-      // Accelerate gravity as it falls
-      let gravity = BASE_GRAVITY + (sq.vy > 0 ? 0.05 * sq.vy : 0);
-      sq.vy += gravity;
-      sq.vx *= FRICTION;
-      sq.vy *= FRICTION;
-      sq.x += sq.vx;
-      sq.y += sq.vy;
 
-      // Collisions with walls
-      if (sq.x < WALL_THICKNESS) {
-        sq.x = WALL_THICKNESS;
-        sq.vx *= -0.5;
-      }
-      if (sq.x + SQUARE_SIZE > canvas.width - WALL_THICKNESS) {
-        sq.x = canvas.width - WALL_THICKNESS - SQUARE_SIZE;
-        sq.vx *= -0.5;
-      }
-      if (sq.y < WALL_THICKNESS) {
-        sq.y = WALL_THICKNESS;
-        sq.vy *= -0.5;
-      }
-      if (sq.y + SQUARE_SIZE > canvas.height - WALL_THICKNESS) {
-        sq.y = canvas.height - WALL_THICKNESS - SQUARE_SIZE;
-        sq.vy *= -0.5;
-        if (Math.abs(sq.vy) < 1) sq.vy = 0;
-      }
-    }
-  }
+   // Collision Helper
+   function resolveSquareCollisions() {
+     for (let i = 0; i < squares.length; i++) {
+       for (let j = i + 1; j < squares.length; j++) {
+         let a = squares[i];
+         let b = squares[j];
+         if (a.held || b.held) continue;
 
-  // Springs (wires)
-  for (const spring of springs) {
-    const a = squares[spring.a];
-    const b = squares[spring.b];
-    const dx = (b.x + SQUARE_SIZE/2) - (a.x + SQUARE_SIZE/2);
-    const dy = (b.y + SQUARE_SIZE/2) - (a.y + SQUARE_SIZE/2);
-    const dist = Math.sqrt(dx*dx + dy*dy);
-    if (dist === 0) continue;
-    const diff = dist - SPRING_LENGTH;
-    const force = SPRING_STIFFNESS * diff;
-    const fx = (dx / dist) * force;
-    const fy = (dy / dist) * force;
-    if (!a.held && !a.frozen) {
-      a.vx += fx;
-      a.vy += fy;
-    }
-    if (!b.held && !b.frozen) {
-      b.vx -= fx;
-      b.vy -= fy;
-    }
-  }
 
-  // Square-to-square collisions
-  resolveSquareCollisions();
-}
+         if (
+           a.x < b.x + SQUARE_SIZE &&
+           a.x + SQUARE_SIZE > b.x &&
+           a.y < b.y + SQUARE_SIZE &&
+           a.y + SQUARE_SIZE > b.y
+         ) {
+           let overlapX = Math.min(a.x + SQUARE_SIZE, b.x + SQUARE_SIZE) - Math.max(a.x, b.x);
+           let overlapY = Math.min(a.y + SQUARE_SIZE, b.y + SQUARE_SIZE) - Math.max(a.y, b.y);
 
-function render() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawWalls();
-  drawSprings();
-  drawSquares();
-  requestAnimationFrame(render);
-}
 
-canvas.addEventListener('mousedown', e => {
-  hideMenu();
-  const rect = canvas.getBoundingClientRect();
-  const mx = e.clientX - rect.left;
-  const my = e.clientY - rect.top;
+           if (a.frozen && b.frozen) continue;
+           else if (a.frozen || b.frozen) {
+             let moving = a.frozen ? b : a;
+             let frozen = a.frozen ? a : b;
+             if (overlapX < overlapY) {
+               let push = overlapX;
+               moving.x += moving.x < frozen.x ? -push : push;
+               moving.vx = 0;
+             } else {
+               let push = overlapY;
+               moving.y += moving.y < frozen.y ? -push : push;
+               moving.vy = 0;
+             }
+           } else {
+             if (overlapX < overlapY) {
+               let push = overlapX / 2;
+               a.x -= a.x < b.x ? push : -push;
+               b.x += a.x < b.x ? push : -push;
+               [a.vx, b.vx] = [b.vx, a.vx];
+             } else {
+               let push = overlapY / 2;
+               a.y -= a.y < b.y ? push : -push;
+               b.y += a.y < b.y ? push : -push;
+               [a.vy, b.vy] = [b.vy, a.vy];
+             }
+           }
+         }
+       }
+     }
+   }
 
-  if (e.button === 0) { // Left click
-    for (let i = squares.length - 1; i >= 0; i--) {
-      const sq = squares[i];
-      if (
-        mx >= sq.x && mx <= sq.x + SQUARE_SIZE &&
-        my >= sq.y && my <= sq.y + SQUARE_SIZE
-      ) {
-        dragging = i;
-        dragOffset.x = mx - sq.x;
-        dragOffset.y = my - sq.y;
-        sq.held = true;
-        break;
-      }
-    }
-  } else if (e.button === 2) { // Right click
-    for (let i = squares.length - 1; i >= 0; i--) {
-      const sq = squares[i];
-      if (
-        mx >= sq.x && mx <= sq.x + SQUARE_SIZE &&
-        my >= sq.y && my <= sq.y + SQUARE_SIZE
-      ) {
-        rightDragging = true;
-        rightDragStart = i;
-        return false;
-      }
-    }
-    // If not on a square, spawn a new one
-    squares.push({
-      x: mx - SQUARE_SIZE/2,
-      y: my - SQUARE_SIZE/2,
-      vx: 0,
-      vy: 0,
-      held: false,
-      frozen: false
-    });
-  }
-});
 
-canvas.addEventListener('mousemove', e => {
-  const rect = canvas.getBoundingClientRect();
-  const mx = e.clientX - rect.left;
-  const my = e.clientY - rect.top;
+   function drawWalls() {
+     ctx.fillStyle = "#333";
+     ctx.fillRect(0, 0, canvas.width, WALL_THICKNESS);
+     ctx.fillRect(0, canvas.height - WALL_THICKNESS, canvas.width, WALL_THICKNESS);
+     ctx.fillRect(0, 0, WALL_THICKNESS, canvas.height);
+     ctx.fillRect(canvas.width - WALL_THICKNESS, 0, WALL_THICKNESS, canvas.height);
+   }
 
-  // Track hovered square for menu
-  hoveredSquare = null;
-  for (let i = squares.length - 1; i >= 0; i--) {
-    const sq = squares[i];
-    if (
-      mx >= sq.x && mx <= sq.x + SQUARE_SIZE &&
-      my >= sq.y && my <= sq.y + SQUARE_SIZE
-    ) {
-      hoveredSquare = i;
-      break;
-    }
-  }
 
-  if (dragging !== null) {
-    const sq = squares[dragging];
-    sq.x = mx - dragOffset.x;
-    sq.y = my - dragOffset.y;
-    sq.vx = 0;
-    sq.vy = 0;
-  }
-});
+   function drawSquares() {
+     for (const sq of squares) {
+       ctx.save();
+       ctx.fillStyle = sq.frozen ? "#85c1e9" : "#3498db";
+       ctx.strokeStyle = "#226699";
+       ctx.lineWidth = 3;
+       ctx.beginPath();
+       ctx.rect(sq.x, sq.y, SQUARE_SIZE, SQUARE_SIZE);
+       ctx.fill();
+       ctx.stroke();
+       ctx.restore();
+     }
+   }
 
-canvas.addEventListener('mouseup', e => {
-  if (e.button === 0 && dragging !== null) {
-    squares[dragging].held = false;
-    dragging = null;
-  }
-  if (e.button === 2 && rightDragging) {
-    const rect = canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
-    for (let i = squares.length - 1; i >= 0; i--) {
-      if (
-        mx >= squares[i].x && mx <= squares[i].x + SQUARE_SIZE &&
-        my >= squares[i].y && my <= squares[i].y + SQUARE_SIZE
-      ) {
-        if (i !== rightDragStart) {
-          // Add a spring (wire) between rightDragStart and i
-          if (!springs.some(s => (s.a === rightDragStart && s.b === i) || (s.a === i && s.b === rightDragStart))) {
-            springs.push({ a: rightDragStart, b: i });
-          }
-        }
-        break;
-      }
-    }
-    rightDragging = false;
-    rightDragStart = null;
-  }
-});
 
-canvas.addEventListener('contextmenu', e => e.preventDefault());
+   function drawSprings() {
+     for (const spring of springs) {
+       const a = squares[spring.a];
+       const b = squares[spring.b];
+       ctx.strokeStyle = "#888";
+       ctx.lineWidth = 4;
+       ctx.beginPath();
+       ctx.moveTo(a.x + SQUARE_SIZE / 2, a.y + SQUARE_SIZE / 2);
+       ctx.lineTo(b.x + SQUARE_SIZE / 2, b.y + SQUARE_SIZE / 2);
+       ctx.stroke();
+     }
+   }
 
-// ---- MENU LOGIC ----
-function showMenu(x, y, squareIndex) {
-  menu.innerHTML = '';
-  menuSquareIndex = squareIndex;
 
-  // Add buttons
-  addMenuButton('Delete', () => {
-    squares.splice(squareIndex, 1);
-    hideMenu();
-  });
+   function updatePhysics() {
+     for (let sq of squares) {
+       if (!sq.held && !sq.frozen) {
+         let gravity = BASE_GRAVITY + (sq.vy > 0 ? 0.05 * sq.vy : 0);
+         sq.vy += gravity;
+         sq.vx *= FRICTION;
+         sq.vy *= FRICTION;
+         sq.x += sq.vx;
+         sq.y += sq.vy;
 
-  addMenuButton(squares[squareIndex].frozen ? 'Unfreeze' : 'Freeze', () => {
-    squares[squareIndex].frozen = !squares[squareIndex].frozen;
-    // Reset velocity if freezing
-    if (squares[squareIndex].frozen) {
-      squares[squareIndex].vx = 0;
-      squares[squareIndex].vy = 0;
-    }
-    hideMenu();
-  });
 
-  // Add more buttons here easily, e.g.
-  // addMenuButton('Custom', () => { ... });
+         if (sq.x < WALL_THICKNESS) {
+           sq.x = WALL_THICKNESS;
+           sq.vx *= -0.5;
+         }
+         if (sq.x + SQUARE_SIZE > canvas.width - WALL_THICKNESS) {
+           sq.x = canvas.width - WALL_THICKNESS - SQUARE_SIZE;
+           sq.vx *= -0.5;
+         }
+         if (sq.y < WALL_THICKNESS) {
+           sq.y = WALL_THICKNESS;
+           sq.vy *= -0.5;
+         }
+         if (sq.y + SQUARE_SIZE > canvas.height - WALL_THICKNESS) {
+           sq.y = canvas.height - WALL_THICKNESS - SQUARE_SIZE;
+           sq.vy *= -0.5;
+           if (Math.abs(sq.vy) < 1) sq.vy = 0;
+         }
+       }
+     }
 
-  menu.style.left = `${x}px`;
-  menu.style.top = `${y}px`;
-  menu.style.display = 'block';
-}
 
-function addMenuButton(label, handler) {
-  const btn = document.createElement('button');
-  btn.className = 'menu-btn';
-  btn.textContent = label;
-  btn.onclick = handler;
-  menu.appendChild(btn);
-}
+     for (const spring of springs) {
+       const a = squares[spring.a];
+       const b = squares[spring.b];
+       const dx = (b.x + SQUARE_SIZE / 2) - (a.x + SQUARE_SIZE / 2);
+       const dy = (b.y + SQUARE_SIZE / 2) - (a.y + SQUARE_SIZE / 2);
+       const dist = Math.sqrt(dx * dx + dy * dy);
+       if (dist === 0) continue;
+       const diff = dist - SPRING_LENGTH;       
+       const force = SPRING_STIFFNESS * diff;
+       const fx = (dx / dist) * force;
+       const fy = (dy / dist) * force;
 
-function hideMenu() {
-  menu.style.display = 'none';
-  menuSquareIndex = null;
-}
 
-// Show menu on F key while hovering a square
-window.addEventListener('keydown', function(e) {
-  if (e.key.toLowerCase() === 'f' && hoveredSquare !== null) {
-    // Get mouse position relative to canvas
-    let rect = canvas.getBoundingClientRect();
-    // Use last mouse position or center of square
-    let menuX = squares[hoveredSquare].x + SQUARE_SIZE + rect.left;
-    let menuY = squares[hoveredSquare].y + rect.top;
-    showMenu(menuX, menuY, hoveredSquare);
-    e.preventDefault();
-  }
-});
+       if (!a.held && !a.frozen) {
+         a.vx += fx;
+         a.vy += fy;
+       }
+       if (!b.held && !b.frozen) {
+         b.vx -= fx;
+         b.vy -= fy;
+       }
+     }
 
-// Hide menu on click outside
-window.addEventListener('mousedown', function(e) {
-  if (!menu.contains(e.target)) {
-    hideMenu();
-  }
-});
 
-updatePhysics();
-setInterval(updatePhysics, 16);
-render();
-</script>
+     resolveSquareCollisions();
+   }
+
+
+   function render() {
+     ctx.clearRect(0, 0, canvas.width, canvas.height);
+     drawWalls();
+     drawSprings();
+     drawSquares();
+     requestAnimationFrame(render);
+   }
+
+
+   canvas.addEventListener('mousedown', e => {
+     hideMenu();
+     const rect = canvas.getBoundingClientRect();
+     const mx = e.clientX - rect.left;
+     const my = e.clientY - rect.top;
+
+
+     if (e.button === 0) { // Left click
+       for (let i = squares.length - 1; i >= 0; i--) {
+         const sq = squares[i];
+         if (
+           mx >= sq.x && mx <= sq.x + SQUARE_SIZE &&
+           my >= sq.y && my <= sq.y + SQUARE_SIZE
+         ) {
+           dragging = i;
+           dragOffset.x = mx - sq.x;
+           dragOffset.y = my - sq.y;
+           sq.held = true;
+           break;
+         }
+       }
+     } else if (e.button === 2) { // Right click
+       for (let i = squares.length - 1; i >= 0; i--) {
+         const sq = squares[i];
+         if (
+           mx >= sq.x && mx <= sq.x + SQUARE_SIZE &&
+           my >= sq.y && my <= sq.y + SQUARE_SIZE
+         ) {
+           rightDragging = true;
+           rightDragStart = i;
+           return false;
+         }
+       }
+       // Add new square
+       squares.push({
+         x: mx - SQUARE_SIZE / 2,
+         y: my - SQUARE_SIZE / 2,
+         vx: 0,
+         vy: 0,
+         held: false,
+         frozen: false
+       });
+     }
+   });
+
+
+   canvas.addEventListener('mousemove', e => {
+     const rect = canvas.getBoundingClientRect();
+     const mx = e.clientX - rect.left;
+     const my = e.clientY - rect.top;
+
+
+     hoveredSquare = null;
+     for (let i = squares.length - 1; i >= 0; i--) {
+       const sq = squares[i];
+       if (
+         mx >= sq.x && mx <= sq.x + SQUARE_SIZE &&
+         my >= sq.y && my <= sq.y + SQUARE_SIZE
+       ) {
+         hoveredSquare = i;
+         break;
+       }
+     }
+
+
+     if (dragging !== null) {
+       const sq = squares[dragging];
+       sq.x = mx - dragOffset.x;
+       sq.y = my - dragOffset.y;
+       sq.vx = 0;
+       sq.vy = 0;
+     }
+   });
+
+
+   canvas.addEventListener('mouseup', e => {
+     if (e.button === 0 && dragging !== null) {
+       squares[dragging].held = false;
+       dragging = null;
+     }
+     if (e.button === 2 && rightDragging) {
+       const rect = canvas.getBoundingClientRect();
+       const mx = e.clientX - rect.left;
+       const my = e.clientY - rect.top;
+       for (let i = squares.length - 1; i >= 0; i--) {
+         const sq = squares[i];
+         if (
+           mx >= sq.x && mx <= sq.x + SQUARE_SIZE &&
+           my >= sq.y && my <= sq.y + SQUARE_SIZE
+         ) {
+           if (i !== rightDragStart) {
+             if (!springs.some(s =>
+               (s.a === rightDragStart && s.b === i) ||
+               (s.a === i && s.b === rightDragStart))) {
+               springs.push({ a: rightDragStart, b: i });
+             }
+           }
+           break;
+         }
+       }
+       rightDragging = false;
+       rightDragStart = null;
+     }
+   });
+
+
+   canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+
+   // ----- Context Menu Logic -----
+   function showMenu(x, y, squareIndex) {
+     menu.innerHTML = '';
+     menuSquareIndex = squareIndex;
+
+
+     addMenuButton('Delete', () => {
+       squares.splice(squareIndex, 1);
+       hideMenu();
+     });
+
+
+     addMenuButton(squares[squareIndex].frozen ? 'Unfreeze' : 'Freeze', () => {
+       squares[squareIndex].frozen = !squares[squareIndex].frozen;
+       if (squares[squareIndex].frozen) {
+         squares[squareIndex].vx = 0;
+         squares[squareIndex].vy = 0;
+       }
+       hideMenu();
+     });
+
+
+     menu.style.left = `${x}px`;
+     menu.style.top = `${y}px`;
+     menu.style.display = 'block';
+   }
+
+
+   function addMenuButton(label, handler) {
+     const btn = document.createElement('button');
+     btn.className = 'menu-btn';
+     btn.textContent = label;
+     btn.onclick = handler;
+     menu.appendChild(btn);
+   }
+
+
+   function hideMenu() {
+     menu.style.display = 'none';
+     menuSquareIndex = null;
+   }
+
+
+   // Show menu with 'F' key
+   window.addEventListener('keydown', e => {
+     if (e.key.toLowerCase() === 'f' && hoveredSquare !== null) {
+       const rect = canvas.getBoundingClientRect();
+       const menuX = squares[hoveredSquare].x + SQUARE_SIZE + rect.left;
+       const menuY = squares[hoveredSquare].y + rect.top;
+       showMenu(menuX, menuY, hoveredSquare);
+       e.preventDefault();
+     }
+   });
+
+
+   // Hide menu if clicking outside
+   window.addEventListener('mousedown', e => {
+     if (!menu.contains(e.target)) {
+       hideMenu();
+     }
+   });
+
+
+   // Start physics and rendering loop
+   setInterval(updatePhysics, 16); // ~60 FPS
+   render();
+ </script>
 </body>
 </html>
+
+
+
+
+
